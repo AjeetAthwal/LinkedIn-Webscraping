@@ -74,7 +74,10 @@ def get_data(soup):
     job_results = soup_job_title[0].contents[0].strip().strip(' ').split(' at ')
     job_title = job_results[0]
     company = job_results[1]
-    return [num_results,job_title,company]
+
+    soup_location = soup.find_all(class_='subline-level-2')
+    location = soup_location[0].contents[0].strip().strip(' ')
+    return [num_results,job_title,company,location]
 
 ###########
 
@@ -88,4 +91,4 @@ for name,prev_employer in zip(df['Name'],df['Previous Employer']):
     soup = get_url_response(df,name,prev_employer,driver)
     data = get_data(soup)
     print(data)
-driver.close()
+# driver.close()

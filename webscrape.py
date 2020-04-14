@@ -25,6 +25,7 @@ csv_to_import_dir = (Path(__file__).parent).resolve()
 csv_to_import_file =  'example_info.csv'
 csv_to_import = join(csv_to_import_dir,csv_to_import_file)
 df = pd.read_csv(csv_to_import)
+df = df.fillna('')
 
 # function to login to LinkedIn
 
@@ -41,8 +42,14 @@ def login(user,pw, driver):
 # function to extract html soup response from search on LinkedIn
 
 def get_url_response(df,name,prev_employer,driver):
-    name_splt = name.split(' ')
-    prev_employer_splt = prev_employer.split(' ')
+    if name != '':
+        name_splt = name.split(' ')
+    else:
+        name_splt = []
+    if prev_employer != '':
+        prev_employer_splt = prev_employer.split(' ')
+    else:
+        prev_employer_splt = []
 
     search_items = []
     search_items.extend(name_splt)
@@ -64,7 +71,7 @@ def get_url_response(df,name,prev_employer,driver):
     return BeautifulSoup(response,'html.parser')
 
 
-# function to get data i want (number of search results, job title, company, location)
+# function to get data i want (number of search results, job title, company, location) (if multiple results it only takes the top name)
 
 def get_data(soup):
     soup_search_results = soup.find_all(class_='search-results__total')
@@ -91,4 +98,4 @@ for name,prev_employer in zip(df['Name'],df['Previous Employer']):
     soup = get_url_response(df,name,prev_employer,driver)
     data = get_data(soup)
     print(data)
-# driver.close()
+driver.close()

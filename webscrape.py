@@ -31,13 +31,13 @@ df = df.fillna('')
 
 def login(user,pw, driver):
     driver.get("https://www.linkedin.com/login?trk=homepage-basic_conversion-modal-signin")
-    time.sleep(5)
     username = driver.find_element_by_name('session_key')
     username.send_keys(user)
     password = driver.find_element_by_name('session_password')
     password.send_keys(pw)
     submit_btn = driver.find_element_by_class_name("btn__primary--large")
     submit_btn.click()
+    time.sleep(5)
 
 # function to extract html soup response from search on LinkedIn
 
@@ -65,7 +65,6 @@ def get_url_response(df,name,prev_employer,driver):
 
     url = 'https://www.linkedin.com/search/results/all/?keywords='+search_items_str+'=GLOBAL_SEARCH_HEADER'
     driver.get(url)
-    time.sleep(5)
     response = driver.page_source
 
     return BeautifulSoup(response,'html.parser')
@@ -80,7 +79,7 @@ def get_ind_data(soup):
     soup_job_title = soup.find_all(class_='subline-level-1')
     job_results = soup_job_title[0].contents[0].strip().strip(' ').split(' at ')
 
-    if ' at ' not in soup_job_title:
+    if ' at ' not in soup_job_title[0].contents[0].strip().strip(' '):
         job_title = ''
         company = job_results[0]
     else:
@@ -99,6 +98,8 @@ login(user,pw,driver)
 
 # go through each csv and get data desired
 
+df_head = ['Name', 'Previous Employer','Number of Search Results', 'Job Title', 'Current Company', 'Location']
+
 for name,prev_employer in zip(df['Name'],df['Previous Employer']):
     soup = get_url_response(df,name,prev_employer,driver)
     data = get_ind_data(soup)
@@ -106,4 +107,17 @@ for name,prev_employer in zip(df['Name'],df['Previous Employer']):
     row_data = [name,prev_employer]
     row_data.extend(data)
 
+    try: new_df
+    except NameError:
+        new_df = pd.DataFrame(columns=df_head)
+        new_df = new_df.append(pd.Series(row_data,index=df_head), ignore_index = True)
+    else:
+        new_df = new_df.append(pd.Series(row_data,index=df_head), ignore_index = True)
+
+# Get csv data of names and previous job titles to search on linkedin
+csv_to_export_dir = csv_to_import_dir
+csv_to_export_file =  'new_'+csv_to_import_file
+csv_to_export = join(csv_to_export_dir,csv_to_export_file)
+
+new_df.to_csv(csv_to_export, index=False)
 driver.close()

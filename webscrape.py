@@ -10,8 +10,8 @@ from os.path import join
 
 
 # Get my linkedin username and password from different directory (user and pass variables)
-userpass_dir = (Path(__file__).parent / "../../Password").resolve()
-userpass_file =  'LinkedIn.csv'
+userpass_dir = (Path(__file__).parent / "../../Data/LinkedIn").resolve()
+userpass_file =  'userpass.csv'
 userpass_loc = join(userpass_dir,userpass_file)
 
 with open(userpass_loc) as file:
@@ -21,8 +21,8 @@ with open(userpass_loc) as file:
         pw = row[1]
 
 # Get csv data of names and previous job titles to search on linkedin
-csv_to_import_dir = (Path(__file__).parent).resolve()
-csv_to_import_file =  'example_info.csv'
+csv_to_import_dir = userpass_dir
+csv_to_import_file =  'info.csv'
 csv_to_import = join(csv_to_import_dir,csv_to_import_file)
 df = pd.read_csv(csv_to_import)
 df = df.fillna('')
@@ -73,14 +73,19 @@ def get_url_response(df,name,prev_employer,driver):
 
 # function to get data i want (number of search results, job title, company, location) (if multiple results it only takes the top name)
 
-def get_data(soup):
+def get_ind_data(soup):
     soup_search_results = soup.find_all(class_='search-results__total')
     num_results = soup_search_results[0].contents[0].strip().strip(' ').split(' ')[1]
 
     soup_job_title = soup.find_all(class_='subline-level-1')
     job_results = soup_job_title[0].contents[0].strip().strip(' ').split(' at ')
-    job_title = job_results[0]
-    company = job_results[1]
+
+    if ' at ' not in soup_job_title:
+        job_title = ''
+        company = job_results[0]
+    else:
+        job_title = job_results[0]
+        company = job_results[1]
 
     soup_location = soup.find_all(class_='subline-level-2')
     location = soup_location[0].contents[0].strip().strip(' ')
@@ -96,6 +101,9 @@ login(user,pw,driver)
 
 for name,prev_employer in zip(df['Name'],df['Previous Employer']):
     soup = get_url_response(df,name,prev_employer,driver)
-    data = get_data(soup)
-    print(data)
+    data = get_ind_data(soup)
+
+    row_data = [name,prev_employer]
+    row_data.extend(data)
+
 driver.close()

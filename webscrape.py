@@ -41,19 +41,26 @@ def login(user,pw, driver):
 
 # function to extract html soup response from search on LinkedIn
 
-def get_url_response(df,name,prev_employer,driver):
-    if name != '':
-        name_splt = name.split(' ')
+def get_url_response(df,fname,lname,prev_employer,driver,num_words_to_remove = 0):
+    if fname != '':
+        fname_splt = fname.split(' ')
     else:
-        name_splt = []
+        fname_splt = []
+    if lname != '':
+        lname_splt = lname.split(' ')
+    else:
+        lname_splt = []
     if prev_employer != '':
         prev_employer_splt = prev_employer.split(' ')
     else:
         prev_employer_splt = []
 
     search_items = []
-    search_items.extend(name_splt)
+    search_items.extend(fname_splt)
+    search_items.extend(lname_splt)
     search_items.extend(prev_employer_splt)
+    if num_words_to_remove>0:
+        search_items = search_items[:-num_words_to_remove]
 
     counter = 0
     for item in search_items:
@@ -74,21 +81,31 @@ def get_url_response(df,name,prev_employer,driver):
 
 def get_ind_data(soup):
     soup_search_results = soup.find_all(class_='search-results__total')
-    num_results = soup_search_results[0].contents[0].strip().strip(' ').split(' ')[1]
 
-    soup_job_title = soup.find_all(class_='subline-level-1')
-    job_results = soup_job_title[0].contents[0].strip().strip(' ').split(' at ')
-
-    if ' at ' not in soup_job_title[0].contents[0].strip().strip(' '):
-        job_title = ''
-        company = job_results[0]
+    try:
+        soup_search_results[0].contents[0].strip().strip(' ').split(' ')[1]
+    except IndexError:
+        results_exist = False
     else:
-        job_title = job_results[0]
-        company = job_results[1]
+        results_exist = True
+    print(results_exist)
 
-    soup_location = soup.find_all(class_='subline-level-2')
-    location = soup_location[0].contents[0].strip().strip(' ')
-    return [num_results,job_title,company,location]
+    if results_exist:
+        num_results = soup_search_results[0].contents[0].strip().strip(' ').split(' ')[1]
+        soup_job_title = soup.find_all(class_='subline-level-1')
+        job_results = soup_job_title[0].contents[0].strip().strip(' ').split(' at ')
+
+        if ' at ' not in soup_job_title[0].contents[0].strip().strip(' '):
+            job_title = ''
+            company = job_results[0]
+        else:
+            job_title = job_results[0]
+            company = job_results[1]
+
+        soup_location = soup.find_all(class_='subline-level-2')
+        location = soup_location[0].contents[0].strip().strip(' ')
+        return [num_results,job_title,company,location]
+    return False
 
 ###########
 
@@ -98,21 +115,33 @@ login(user,pw,driver)
 
 # go through each csv and get data desired
 
-df_head = ['Name', 'Previous Employer','Number of Search Results', 'Job Title', 'Current Company', 'Location']
+df_head = ['First Name', 'Last Name', 'Last Name Adj', 'Account Name','Number of Search Attempts','Number of Search Results', 'Job Title', 'Current Company', 'Location']
+print(df_head)
+for fname,lname,prev_employer in zip(df['First Name'],df['Last Name'],df['Account Name']):
+    if lname[-7:] == " (gone)":
+        lname_adj = lname[:-7]
+    elif lname[-18:] == ' (went to Celsius)':
+        lname_adj = lname[:-18]
+    else:
+        lname_adj = lname
 
-for name,prev_employer in zip(df['Name'],df['Previous Employer']):
-    soup = get_url_response(df,name,prev_employer,driver)
-    data = get_ind_data(soup)
-
-    row_data = [name,prev_employer]
+    data=False
+    counter = 0
+    while data == False:
+        soup = get_url_response(df,fname,lname_adj,prev_employer,driver,counter)
+        data = get_ind_data(soup)
+        counter +=1
+    print(data)
+    row_data = [fname,lname,lname_adj,prev_employer,counter]
     row_data.extend(data)
-
+    print(row_data)
     try: new_df
     except NameError:
         new_df = pd.DataFrame(columns=df_head)
         new_df = new_df.append(pd.Series(row_data,index=df_head), ignore_index = True)
     else:
         new_df = new_df.append(pd.Series(row_data,index=df_head), ignore_index = True)
+    print(new_df)
 
 # Get csv data of names and previous job titles to search on linkedin
 csv_to_export_dir = csv_to_import_dir

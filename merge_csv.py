@@ -19,9 +19,19 @@ new_csv = join(csv_dir,new_csv_file)
 new_df = pd.read_csv(new_csv)
 
 merged_csv = join(csv_dir,merged_csv_file)
+true_csv = join(csv_dir,'true_'+merged_csv_file)
+false_csv = join(csv_dir,'false_'+merged_csv_file)
 
 new_df = new_df.drop(['First Name','Last Name','Last Name Adj','Account Name'],axis=1)
 
 merged_df = pd.concat([old_df,new_df],axis=1)
 
 merged_df.to_csv(merged_csv , index=False)
+
+true_df = merged_df[merged_df['Number of Search Results']==1]
+false_df = merged_df[merged_df['Number of Search Results'] > 1]
+
+# false_df = false_df.drop(['Number of Search Attempts','Number of Search Results','Job Title','Current Company','Location'],axis=1)
+
+false_df.to_csv(false_csv , index=False)
+true_df.to_csv(true_csv , index=False)
